@@ -8,16 +8,18 @@ from meter.config import ex
 from meter.modules import METERTransformerSS
 from meter.datamodules.multitask_datamodule import MTDataModule
 
-import resource
-rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
-resource.setrlimit(resource.RLIMIT_NOFILE, (20480, rlimit[1]))
+# import resource
+# rlimit = resource.getrlimit(resource.RLIMIT_NOFILE)
+# resource.setrlimit(resource.RLIMIT_NOFILE, (20480, rlimit[1]))
 
 @ex.automain
 def main(_config):
     _config = copy.deepcopy(_config)
     pl.seed_everything(_config["seed"])
 
-    dm = MTDataModule(_config, dist=True)
+    # dm = MTDataModule(_config, dist=True)
+    dm = MTDataModule(_config, dist=False)
+
 
     model = METERTransformerSS(_config)
     exp_name = f'{_config["exp_name"]}'
@@ -48,26 +50,29 @@ def main(_config):
         _config["per_gpu_batchsize"] * num_gpus * _config["num_nodes"]
     ), 1)
 
-    max_steps = _config["max_steps"] if _config["max_steps"] is not None else None
+    # max_steps = _config["max_steps"] if _config["max_steps"] is not None else None
+    max_steps = -1
 
     trainer = pl.Trainer(
-        gpus=_config["num_gpus"],
+        # gpus=_config["num_gpus"],
+        accelerator='gpu',
         num_nodes=_config["num_nodes"],
         precision=_config["precision"],
-        accelerator="ddp",
+        # accelerator="ddp",
         benchmark=True,
         deterministic=True,
-        max_epochs=_config["max_epoch"] if max_steps is None else 1000,
+        # max_epochs=_config["max_epoch"] if max_steps is None else 1000,
+        max_epochs=1000,
         max_steps=max_steps,
         callbacks=callbacks,
         logger=logger,
-        prepare_data_per_node=False,
-        replace_sampler_ddp=False,
+        # prepare_data_per_node=False,
+        # replace_sampler_ddp=False,
         accumulate_grad_batches=grad_steps,
         log_every_n_steps=10,
-        flush_logs_every_n_steps=10,
-        resume_from_checkpoint=_config["resume_from"],
-        weights_summary="top",
+        # flush_logs_every_n_steps=10,
+        # resume_from_checkpoint=_config["resume_from"],
+        # weights_summary="top",
         fast_dev_run=_config["fast_dev_run"],
         val_check_interval=_config["val_check_interval"],
     )

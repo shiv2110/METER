@@ -31,16 +31,17 @@ def config():
     # Image setting
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]
-    image_size = 224
-    patch_size = 32
+    image_size = 288
+    patch_size = 16
     draw_false_image = 1
     image_only = False
-    resolution_before = 224
+    resolution_before = 288
 
     # Text Setting
     vqav2_label_size = 3129
     max_text_len = 40
-    tokenizer = "bert-base-uncased"
+    # tokenizer = "bert-base-uncased"
+    tokenizer = 'roberta-base'
     vocab_size = 30522
     whole_word_masking = False # note that whole_word_masking does not work for RoBERTa
     mlm_prob = 0.15
@@ -50,7 +51,7 @@ def config():
     num_top_layer = 6
     input_image_embed_size = 768
     input_text_embed_size = 768
-    vit = 'ViT-B/32'
+    vit = 'ViT-B/16'
     hidden_size = 768
     num_heads = 12
     num_layers = 6
@@ -153,7 +154,8 @@ def task_finetune_vqa_clip_bert():
     tokenizer = "bert-base-uncased"
     max_text_len = 50
     input_text_embed_size = 768
-    vit = 'ViT-B/32'
+    # vit = 'ViT-B/32'
+    vit = 'ViT-B/16'
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]
     input_image_embed_size = 768

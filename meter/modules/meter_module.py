@@ -164,6 +164,7 @@ class METERTransformerSS(pl.LightningModule):
         if self.hparams.config["load_path"] != "" and self.hparams.config["test_only"]:
             ckpt = torch.load(self.hparams.config["load_path"], map_location="cpu")
             state_dict = ckpt["state_dict"]
+            
             if self.is_clip:
                 state_dict = adapt_position_encoding(state_dict, after=resolution_after, patch_size=self.hparams.config['patch_size'])
             else:
@@ -199,6 +200,8 @@ class METERTransformerSS(pl.LightningModule):
         text_embeds = self.cross_modal_text_transform(text_embeds)
 
         image_embeds = self.vit_model(img)
+        # print(f"IN INFERRRRRRRRRRRRRRRRRRR: {image_embeds.shape}")
+
         image_embeds = self.cross_modal_image_transform(image_embeds)
         image_masks = torch.ones((image_embeds.size(0), image_embeds.size(1)), dtype=torch.long, device=device)
         extend_image_masks = self.text_transformer.get_extended_attention_mask(image_masks, image_masks.size(), device)
@@ -216,6 +219,7 @@ class METERTransformerSS(pl.LightningModule):
             x1 = text_layer(x, y, extend_text_masks, extend_image_masks)
             y1 = image_layer(y, x, extend_image_masks, extend_text_masks)
             x, y = x1[0], y1[0]
+            # print(y.shape)
 
         text_feats, image_feats = x, y
         cls_feats_text = self.cross_modal_text_pooler(x)
@@ -226,6 +230,7 @@ class METERTransformerSS(pl.LightningModule):
             cls_feats_image = self.cross_modal_image_pooler(avg_image_feats)
         cls_feats = torch.cat([cls_feats_text, cls_feats_image], dim=-1)
 
+        # print("helloooooooooooooooooooooooooooooooooooooo")
         ret = {
             "text_feats": text_feats,
             "image_feats": image_feats,
@@ -297,7 +302,7 @@ class METERTransformerSS(pl.LightningModule):
 
         return ret
 
-    def test_epoch_end(self, outs):
+    def on_test_epoch_end(self, outs):
         model_name = self.hparams.config["load_path"].split("/")[-1][:-5]
 
         if self.hparams.config["loss_names"]["vqa"] > 0:
