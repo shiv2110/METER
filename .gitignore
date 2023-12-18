@@ -1,2 +1,2 @@
-meter_clip16_224_roberta_pretrain.ckpt
 meter_clip16_288_roberta_vqa.ckpt
+meter/__pycache__
