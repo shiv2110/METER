@@ -10,7 +10,7 @@ import re
 import json
 import urllib.request
 from scipy.sparse.linalg import eigsh
-from scipy.sparse import diags
+from scipy.sparse import diags, csr_matrix
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
 from pymatting.util.util import row_sum
@@ -20,17 +20,61 @@ from PIL import Image
 from meter.config import ex
 from meter.modules import METERTransformerSS
 
-from meter.transforms import pixelbert_transform, vit_transform, clip_transform
+from meter.transforms import vit_transform, clip_transform, clip_transform_randaug
 from meter.datamodules.datamodule_base import get_pretrained_tokenizer
 
 
 @ex.automain
+
+
+
+
 def main(_config):
+    # def knn_affinity(image, n_neighbors=[20, 10], distance_weights=[2.0, 0.1]):
+    #     """Computes a KNN-based affinity matrix. Note that this function requires pymatting"""
+    #     try:
+    #         from pymatting.util.kdtree import knn
+    #     except:
+    #         raise ImportError(
+    #             'Please install pymatting to compute KNN affinity matrices:\n'
+    #             'pip3 install pymatting'
+    #         )
+
+    #     h, w = image.shape[2:]
+    #     r, g, b = image.reshape(-1, 3).T
+    #     n = w * h
+
+    #     x = np.tile(np.linspace(0, 1, w), h)
+    #     y = np.repeat(np.linspace(0, 1, h), w)
+
+    #     i, j = [], []
+
+    #     for k, distance_weight in zip(n_neighbors, distance_weights):
+    #         f = np.stack(
+    #             [r, g, b, distance_weight * x, distance_weight * y],
+    #             axis=1,
+    #             out=np.zeros((n, 5), dtype=np.float32),
+    #         )
+
+    #         distances, neighbors = knn(f, f, k=k)
+
+    #         i.append(np.repeat(np.arange(n), k))
+    #         j.append(neighbors.flatten())
+
+    #     ij = np.concatenate(i + j)
+    #     ji = np.concatenate(j + i)
+    #     coo_data = np.ones(2 * sum(n_neighbors) * n)
+
+    #     # This is our affinity matrix
+    #     W = csr_matrix((coo_data, (ij, ji)), (n, n))
+    #     return W
+    
+
     _config = copy.deepcopy(_config)
 
     loss_names = {
         "itm": 0,
-        "mlm": 0,
+        "mlm": 1,
         "mpp": 0,
         "vqa": 1,
         "vcr": 0,
@@ -60,6 +104,8 @@ def main(_config):
     device = "cuda:0" if _config["num_gpus"] > 0 else "cpu"
     model.to(device)
 
+    IMG_SIZE = 576
+
     def infer(url, text):
         try:
             if "http" in url:
@@ -68,10 +114,10 @@ def main(_config):
             else:
                 image = Image.open(url)
             orig_shape = np.array(image).shape
-            # img = pixelbert_transform(size=384)(image)
-            # img = vit_transform(size=224)(image)
-            img = clip_transform(size=288)(image)
-            print("vit transformed image shape: {}".format(img.shape))
+            img = clip_transform(size=IMG_SIZE)(image)
+            # img = vit_transform(size=IMG_SIZE)(image)
+            # img = clip_transform_randaug(size=IMG_SIZE)(image)
+            print("transformed image shape: {}".format(img.shape))
             img = img.unsqueeze(0).to(device)
 
         except:
@@ -88,6 +134,8 @@ def main(_config):
             vqa_logits = model.vqa_classifier(ret["cls_feats"])
 
         answer = id2ans[str(vqa_logits.argmax().item())]
+
+        # print(f"Image feats shape: {ret['image_feats'].shape}")
         return [np.array(image), answer], ret['image_feats'][0], img
     
 
@@ -131,18 +179,18 @@ def main(_config):
     # )
 
     # interface.launch(debug=True)
-    result, feats, image = infer('../../nii_depressed.jpg', 'Did the boy wear glasses?')
-    # result, feats, image = infer("https://s3.geograph.org.uk/geophotos/06/21/24/6212487_1cca7f3f_1024x1024.jpg", "What is the color of the flower?")
-    PATCH_SIZE = 16
-    # feats = feats.unsqueeze(dim = 0)
+    # result, feats, image = infer('easy_test.jpg', "what is the shape of the thing in the centre?")
+    result, feats, image = infer('../../nii_depressed.jpg', "What is in the ears?")
+
+    # result, feats, image = infer("https://s3.geograph.org.uk/geophotos/06/21/24/6212487_1cca7f3f_1024x1024.jpg", "What is the colour of the flowers?")
+    # PATCH_SIZE = 16
     print("Answer: {}".format(result[1]))
-    # print("Feature shape: {} | orig_img shape: {}".format(feats.shape, orig_shape))
-    feats = F.normalize(feats, p = 2, dim = -1)
+    print("Feature shape: {} | orig_img shape: {}".format(feats.shape, image.shape))
+    # feats = F.normalize(feats, p = 2, dim = -1)
 
     # H_patch, W_patch = orig_shape[0]//PATCH_SIZE, orig_shape[1]//PATCH_SIZE
-    H_patch, W_patch = 18, 18
-
-    H_pad_lr, W_pad_lr = H_patch, W_patch
+    # H_patch, W_patch = 18, 18
+    # H_pad_lr, W_pad_lr = H_patch, W_patch
     # feats = F.interpolate(
     #         feats.T.reshape(1, -1,  H_patch, W_patch), 
     #         size=(H_pad_lr, W_pad_lr), mode='bilinear', align_corners=False
@@ -169,8 +217,8 @@ def main(_config):
 
     dim = int(image_relevance.numel() ** 0.5)
     image_relevance = image_relevance.reshape(1, 1, dim, dim)
-    image_relevance = torch.nn.functional.interpolate(image_relevance, size=288, mode='bilinear')
-    image_relevance = image_relevance.reshape(288, 288).numpy()
+    image_relevance = torch.nn.functional.interpolate(image_relevance, size=IMG_SIZE, mode='bilinear')
+    image_relevance = image_relevance.reshape(IMG_SIZE, IMG_SIZE).cpu().numpy()
     image_relevance = (image_relevance - image_relevance.min()) / (image_relevance.max() - image_relevance.min())
 
 
@@ -182,7 +230,7 @@ def main(_config):
         return cam
 
 
-    image = image[0].permute(1, 2, 0).numpy()
+    image = image[0].permute(1, 2, 0).cpu().numpy()
     image = (image - image.min()) / (image.max() - image.min())
     vis = show_cam_on_image(image, image_relevance)
     vis = np.uint8(255 * vis)

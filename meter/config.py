@@ -25,17 +25,17 @@ def config():
     exp_name = "meter"
     seed = 0
     datasets = ["coco", "vg", "sbu", "gcc"]
-    loss_names = _loss_names({"itm": 1, "mlm": 1})
+    loss_names = _loss_names({"mlm": 1, "vqa": 1})
     batch_size = 4096  # this is a desired batch size; pl trainer will accumulate gradients when per step batch is smaller.
 
     # Image setting
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]
-    image_size = 288
+    image_size = 576
     patch_size = 16
     draw_false_image = 1
     image_only = False
-    resolution_before = 288
+    resolution_before = 576
 
     # Text Setting
     vqav2_label_size = 3129
@@ -151,7 +151,8 @@ def task_finetune_vqa_clip_bert():
     val_check_interval = 0.1
     lr_mult_head = 50
     lr_mult_cross_modal = 5
-    tokenizer = "bert-base-uncased"
+    # tokenizer = "bert-base-uncased"
+    tokenizer = "roberta-base"
     max_text_len = 50
     input_text_embed_size = 768
     # vit = 'ViT-B/32'
@@ -273,7 +274,7 @@ def clip32():
 @ex.named_config
 def clip16():
     vit = 'ViT-B/16'
-    image_size = 224
+    image_size = 576
     patch_size = 16
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]

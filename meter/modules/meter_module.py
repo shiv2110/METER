@@ -77,6 +77,7 @@ class METERTransformerSS(pl.LightningModule):
 
         if 'roberta' in config['tokenizer']:
             self.text_transformer = RobertaModel.from_pretrained(config['tokenizer'])
+            # self.text_transformer = RobertaModel(config['tokenizer'])
         else:
             self.text_transformer = BertModel.from_pretrained(config['tokenizer'])
 
