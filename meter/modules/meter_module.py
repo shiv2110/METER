@@ -216,10 +216,13 @@ class METERTransformerSS(pl.LightningModule):
         )
 
         x, y = text_embeds, image_embeds
+        all_text_feats, all_image_feats = [], []
         for text_layer, image_layer in zip(self.cross_modal_text_layers, self.cross_modal_image_layers):
             x1 = text_layer(x, y, extend_text_masks, extend_image_masks)
             y1 = image_layer(y, x, extend_image_masks, extend_text_masks)
             x, y = x1[0], y1[0]
+            all_text_feats.append(x.detach().clone())
+            all_image_feats.append(y.detach().clone())
             # print(y.shape)
 
         text_feats, image_feats = x, y
@@ -239,6 +242,8 @@ class METERTransformerSS(pl.LightningModule):
             "text_labels": text_labels,
             "text_ids": text_ids,
             "text_masks": text_masks,
+            "all_text_feats": all_text_feats,
+            "all_image_feats": all_image_feats
         }
 
 
