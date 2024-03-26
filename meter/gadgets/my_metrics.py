@@ -1,6 +1,11 @@
 import torch
+<<<<<<< HEAD
 # from pytorch_lightning.metrics import Metric
 from torchmetrics import Metric
+=======
+from pytorch_lightning.metrics import Metric
+
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
 
 class Accuracy(Metric):
     def __init__(self, dist_sync_on_step=False):

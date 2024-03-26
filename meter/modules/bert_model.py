@@ -845,7 +845,11 @@ class BertModel(BertPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @add_code_sample_docstrings(
+<<<<<<< HEAD
         processor_class=_TOKENIZER_FOR_DOC,
+=======
+        tokenizer_class=_TOKENIZER_FOR_DOC,
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         checkpoint=_CHECKPOINT_FOR_DOC,
         output_type=BaseModelOutputWithPoolingAndCrossAttentions,
         config_class=_CONFIG_FOR_DOC,
@@ -1239,7 +1243,11 @@ class BertForMaskedLM(BertPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @add_code_sample_docstrings(
+<<<<<<< HEAD
         processor_class=_TOKENIZER_FOR_DOC,
+=======
+        tokenizer_class=_TOKENIZER_FOR_DOC,
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         checkpoint=_CHECKPOINT_FOR_DOC,
         output_type=MaskedLMOutput,
         config_class=_CONFIG_FOR_DOC,
@@ -1428,7 +1436,11 @@ class BertForSequenceClassification(BertPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @add_code_sample_docstrings(
+<<<<<<< HEAD
         processor_class=_TOKENIZER_FOR_DOC,
+=======
+        tokenizer_class=_TOKENIZER_FOR_DOC,
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         checkpoint=_CHECKPOINT_FOR_DOC,
         output_type=SequenceClassifierOutput,
         config_class=_CONFIG_FOR_DOC,
@@ -1524,7 +1536,11 @@ class BertForMultipleChoice(BertPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, num_choices, sequence_length"))
     @add_code_sample_docstrings(
+<<<<<<< HEAD
         processor_class=_TOKENIZER_FOR_DOC,
+=======
+        tokenizer_class=_TOKENIZER_FOR_DOC,
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         checkpoint=_CHECKPOINT_FOR_DOC,
         output_type=MultipleChoiceModelOutput,
         config_class=_CONFIG_FOR_DOC,
@@ -1619,7 +1635,11 @@ class BertForTokenClassification(BertPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @add_code_sample_docstrings(
+<<<<<<< HEAD
         processor_class=_TOKENIZER_FOR_DOC,
+=======
+        tokenizer_class=_TOKENIZER_FOR_DOC,
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         checkpoint=_CHECKPOINT_FOR_DOC,
         output_type=TokenClassifierOutput,
         config_class=_CONFIG_FOR_DOC,
@@ -1709,7 +1729,11 @@ class BertForQuestionAnswering(BertPreTrainedModel):
 
     @add_start_docstrings_to_model_forward(BERT_INPUTS_DOCSTRING.format("batch_size, sequence_length"))
     @add_code_sample_docstrings(
+<<<<<<< HEAD
         processor_class=_TOKENIZER_FOR_DOC,
+=======
+        tokenizer_class=_TOKENIZER_FOR_DOC,
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         checkpoint=_CHECKPOINT_FOR_DOC,
         output_type=QuestionAnsweringModelOutput,
         config_class=_CONFIG_FOR_DOC,

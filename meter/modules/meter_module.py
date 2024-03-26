@@ -77,7 +77,10 @@ class METERTransformerSS(pl.LightningModule):
 
         if 'roberta' in config['tokenizer']:
             self.text_transformer = RobertaModel.from_pretrained(config['tokenizer'])
+<<<<<<< HEAD
             # self.text_transformer = RobertaModel(config['tokenizer'])
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         else:
             self.text_transformer = BertModel.from_pretrained(config['tokenizer'])
 
@@ -165,7 +168,10 @@ class METERTransformerSS(pl.LightningModule):
         if self.hparams.config["load_path"] != "" and self.hparams.config["test_only"]:
             ckpt = torch.load(self.hparams.config["load_path"], map_location="cpu")
             state_dict = ckpt["state_dict"]
+<<<<<<< HEAD
             
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
             if self.is_clip:
                 state_dict = adapt_position_encoding(state_dict, after=resolution_after, patch_size=self.hparams.config['patch_size'])
             else:
@@ -201,8 +207,11 @@ class METERTransformerSS(pl.LightningModule):
         text_embeds = self.cross_modal_text_transform(text_embeds)
 
         image_embeds = self.vit_model(img)
+<<<<<<< HEAD
         # print(f"IN INFERRRRRRRRRRRRRRRRRRR: {image_embeds.shape}")
 
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         image_embeds = self.cross_modal_image_transform(image_embeds)
         image_masks = torch.ones((image_embeds.size(0), image_embeds.size(1)), dtype=torch.long, device=device)
         extend_image_masks = self.text_transformer.get_extended_attention_mask(image_masks, image_masks.size(), device)
@@ -216,14 +225,20 @@ class METERTransformerSS(pl.LightningModule):
         )
 
         x, y = text_embeds, image_embeds
+<<<<<<< HEAD
         all_text_feats, all_image_feats = [], []
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         for text_layer, image_layer in zip(self.cross_modal_text_layers, self.cross_modal_image_layers):
             x1 = text_layer(x, y, extend_text_masks, extend_image_masks)
             y1 = image_layer(y, x, extend_image_masks, extend_text_masks)
             x, y = x1[0], y1[0]
+<<<<<<< HEAD
             all_text_feats.append(x.detach().clone())
             all_image_feats.append(y.detach().clone())
             # print(y.shape)
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
 
         text_feats, image_feats = x, y
         cls_feats_text = self.cross_modal_text_pooler(x)
@@ -234,7 +249,10 @@ class METERTransformerSS(pl.LightningModule):
             cls_feats_image = self.cross_modal_image_pooler(avg_image_feats)
         cls_feats = torch.cat([cls_feats_text, cls_feats_image], dim=-1)
 
+<<<<<<< HEAD
         # print("helloooooooooooooooooooooooooooooooooooooo")
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         ret = {
             "text_feats": text_feats,
             "image_feats": image_feats,
@@ -242,8 +260,11 @@ class METERTransformerSS(pl.LightningModule):
             "text_labels": text_labels,
             "text_ids": text_ids,
             "text_masks": text_masks,
+<<<<<<< HEAD
             "all_text_feats": all_text_feats,
             "all_image_feats": all_image_feats
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         }
 
 
@@ -308,7 +329,11 @@ class METERTransformerSS(pl.LightningModule):
 
         return ret
 
+<<<<<<< HEAD
     def on_test_epoch_end(self, outs):
+=======
+    def test_epoch_end(self, outs):
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
         model_name = self.hparams.config["load_path"].split("/")[-1][:-5]
 
         if self.hparams.config["loss_names"]["vqa"] > 0:

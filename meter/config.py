@@ -25,23 +25,39 @@ def config():
     exp_name = "meter"
     seed = 0
     datasets = ["coco", "vg", "sbu", "gcc"]
+<<<<<<< HEAD
     loss_names = _loss_names({"mlm": 1, "vqa": 1})
+=======
+    loss_names = _loss_names({"itm": 1, "mlm": 1})
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
     batch_size = 4096  # this is a desired batch size; pl trainer will accumulate gradients when per step batch is smaller.
 
     # Image setting
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]
+<<<<<<< HEAD
     image_size = 576
     patch_size = 16
     draw_false_image = 1
     image_only = False
     resolution_before = 576
+=======
+    image_size = 224
+    patch_size = 32
+    draw_false_image = 1
+    image_only = False
+    resolution_before = 224
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
 
     # Text Setting
     vqav2_label_size = 3129
     max_text_len = 40
+<<<<<<< HEAD
     # tokenizer = "bert-base-uncased"
     tokenizer = 'roberta-base'
+=======
+    tokenizer = "bert-base-uncased"
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
     vocab_size = 30522
     whole_word_masking = False # note that whole_word_masking does not work for RoBERTa
     mlm_prob = 0.15
@@ -51,7 +67,11 @@ def config():
     num_top_layer = 6
     input_image_embed_size = 768
     input_text_embed_size = 768
+<<<<<<< HEAD
     vit = 'ViT-B/16'
+=======
+    vit = 'ViT-B/32'
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
     hidden_size = 768
     num_heads = 12
     num_layers = 6
@@ -151,12 +171,19 @@ def task_finetune_vqa_clip_bert():
     val_check_interval = 0.1
     lr_mult_head = 50
     lr_mult_cross_modal = 5
+<<<<<<< HEAD
     # tokenizer = "bert-base-uncased"
     tokenizer = "roberta-base"
     max_text_len = 50
     input_text_embed_size = 768
     # vit = 'ViT-B/32'
     vit = 'ViT-B/16'
+=======
+    tokenizer = "bert-base-uncased"
+    max_text_len = 50
+    input_text_embed_size = 768
+    vit = 'ViT-B/32'
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]
     input_image_embed_size = 768
@@ -274,7 +301,11 @@ def clip32():
 @ex.named_config
 def clip16():
     vit = 'ViT-B/16'
+<<<<<<< HEAD
     image_size = 576
+=======
+    image_size = 224
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
     patch_size = 16
     train_transform_keys = ["clip"]
     val_transform_keys = ["clip"]

@@ -192,11 +192,14 @@ def _download(url: str, root: str = os.path.expanduser("~/.cache/clip")):
 
 def adapt_position_encoding(model, patch_size=32, after=384,
                             suffix='visual.positional_embedding'):
+<<<<<<< HEAD
     
     # for ks in model: 
         # if "position" in ks:
             # print(ks)
 
+=======
+>>>>>>> f4f09345b26ee21add0a756d06598e3c04726345
     keys = [k for k in model if k.endswith(suffix)]
     assert len(keys) == 1
     key = keys[0]
