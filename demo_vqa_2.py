@@ -104,19 +104,19 @@ def main(_config):
 
 
     # question = "What is the colour of her pants?"
-    # question = "Does he have earphones plugged in?"
-    question = "Does he have spectacles?"
+    question = "Does he have earphones plugged in?"
+    # question = "Does he have spectacles?"
     # question = "Is there an owl?"
     # question = "Is the man swimming?"
     # question = "What animals are shown?"
     # question = "What animal hat did she wear?"
 
-    # result, all_image_feats, all_text_feats, image, text_tokens = infer('../../nii_depressed.jpg', question)
+    result, all_image_feats, all_text_feats, image, text_tokens = infer('../../nii_depressed.jpg', question)
     # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/skii.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/clock_owl.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/swim.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/cows.jpg', question)
-    result, all_image_feats, all_text_feats, image, text_tokens = infer('images/weird_dj.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/weird_dj.jpg', question)
     # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/nee-sama.jpeg', question)
     # print(f"Text feats shape: {text_feats.shape}")
 
