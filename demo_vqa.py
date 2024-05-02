@@ -9,7 +9,7 @@ import numpy as np
 import re
 import json
 import urllib.request
-from scipy.sparse.linalg import eigsh
+from scipy.sparse.linalg import eigsh, eigs
 from scipy.sparse import diags, csr_matrix
 import torch.nn.functional as F
 import matplotlib.pyplot as plt
@@ -103,21 +103,21 @@ def main(_config):
     
 
 
-    # question = "What is the colour of her pants?"
+    question = "What is the colour of her hat?"
     # question = "Does he have earphones plugged in?"
     # question = "Does he have spectacles?"
     # question = "Is there an owl?"
     # question = "Is the man swimming?"
     # question = "What animals are shown?"
-    question = "What animal hat did she wear?"
+    # question = "What animal hat did she wear?"
 
     # result, image_feats, text_feats, image, text_tokens = infer('../../nii_depressed.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/skii.jpg', question)
+    result, image_feats, text_feats, image, text_tokens = infer('images/skii.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/clock_owl.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/swim.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/cows.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/weird_dj.jpg', question)
-    result, image_feats, text_feats, image, text_tokens = infer('images/nee-sama.jpeg', question)
+    # result, image_feats, text_feats, image, text_tokens = infer('images/nee-sama.jpeg', question)
     print(f"Text feats shape: {text_feats.shape}")
 
 
@@ -147,9 +147,14 @@ def main(_config):
         # L[ np.isnan(L) ] = 0
         # L[ L == np.inf ] = 0
         try:
-            eigenvalues, eigenvectors = eigsh(L, k = 5, which = 'LM', sigma = 0, M = D)
+            eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', sigma = 0, M = D)
         except:
-            eigenvalues, eigenvectors = eigsh(L, k = 5, which = 'SM', sigma = 0, M = D)
+            try:
+                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'SM', sigma = 0, M = D)
+            except:
+                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', M = D)
+
+
         
 
 
@@ -159,7 +164,8 @@ def main(_config):
     image_relevance = torch.abs(get_eigen(image_feats[1:, :]))
 
     # print()
-    text_relevance = get_eigen(text_feats[1:-1])
+    text_relevance = torch.abs(get_eigen(text_feats[1:-1]))
+    # text_relevance = get_eigen(text_feats[1:-1])
     print(text_relevance)
     # text_relevance = torch.abs(text_relevance)
     # plt.title("Spectral Approach word impotance")
