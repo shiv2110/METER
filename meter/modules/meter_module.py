@@ -11,12 +11,14 @@ from .clip_model import build_model, adapt_position_encoding
 from .swin_helpers import swin_adapt_position_encoding
 from transformers import RobertaConfig, RobertaModel
 
+
+
 class METERTransformerSS(pl.LightningModule):
     def __init__(self, config):
         super().__init__()
         self.save_hyperparameters()
 
-        self.is_clip= (not 'swin' in config['vit'])
+        self.is_clip = (not 'swin' in config['vit'])
 
         if 'roberta' in config['tokenizer']:
             bert_config = RobertaConfig(
@@ -172,6 +174,125 @@ class METERTransformerSS(pl.LightningModule):
                 state_dict = swin_adapt_position_encoding(state_dict, after=resolution_after, before=config['resolution_before'])
             self.load_state_dict(state_dict, strict=False)
 
+
+
+
+    ## baka function
+    # def infer_relevance_maps(
+    #     self,
+    #     batch,
+    #     mask_text=False,
+    #     mask_image=False,
+    #     image_token_type_idx=1,
+    #     img=None,
+    # ):
+    #     if img is None:
+    #         if f"image_{image_token_type_idx - 1}" in batch:
+    #             imgkey = f"image_{image_token_type_idx - 1}"
+    #         else:
+    #             imgkey = "image"
+    #         img = batch[imgkey][0]
+
+    #     do_mlm = "_mlm" if mask_text else ""
+    #     text_ids = batch[f"text_ids{do_mlm}"]
+    #     text_labels = batch[f"text_labels{do_mlm}"]
+    #     text_masks = batch[f"text_masks"]
+
+    #     text_embeds = self.text_transformer.embeddings(input_ids=text_ids)
+    #     device = text_embeds.device
+    #     input_shape = text_masks.size()
+    #     extend_text_masks = self.text_transformer.get_extended_attention_mask(text_masks, input_shape, device)
+    #     for layer in self.text_transformer.encoder.layer:
+    #         text_embeds = layer(text_embeds, extend_text_masks)[0]
+    #     text_embeds = self.cross_modal_text_transform(text_embeds)
+    #     # print("here")
+
+
+    #     image_embeds = self.vit_model(img)
+    #     # image_embeds = image_embeds[:, :401, :] # baka 
+    #     # print(f"IN INFERRRRRRRRRRRRRRRRRRR: {image_embeds.shape}")
+
+    #     image_embeds = self.cross_modal_image_transform(image_embeds)
+    #     image_masks = torch.ones((image_embeds.size(0), image_embeds.size(1)), dtype=torch.long, device=device)
+    #     extend_image_masks = self.text_transformer.get_extended_attention_mask(image_masks, image_masks.size(), device)
+
+    #     text_embeds, image_embeds = (
+    #         text_embeds + self.token_type_embeddings(torch.zeros_like(text_masks)),
+    #         image_embeds
+    #         + self.token_type_embeddings(
+    #             torch.full_like(image_masks, image_token_type_idx)
+    #         ),
+    #     )
+
+    #     text_tokens = text_embeds.shape[1]
+    #     image_tokens = image_embeds.shape[1]
+    #     # text self attention matrix
+    #     self.R_t_t = torch.eye(text_tokens, text_tokens).to(device)
+    #     # image self attention matrix
+    #     self.R_i_i = torch.eye(image_tokens, image_tokens).to(device)
+    #     # impact of images on text
+    #     self.R_t_i = torch.zeros(text_tokens, image_tokens).to(device)
+    #     # impact of text on images
+    #     self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)
+
+
+    #     x, y = text_embeds, image_embeds
+    #     all_text_feats, all_image_feats = [], []
+    #     for text_layer, image_layer in zip(self.cross_modal_text_layers, self.cross_modal_image_layers):
+    #         x1 = text_layer(x, y, extend_text_masks, extend_image_masks)
+    #         y1 = image_layer(y, x, extend_image_masks, extend_text_masks)
+
+    #         self.handle_self_attention_image(image_layer)
+    #         R_i_t_addition, R_i_i_addition = self.handle_co_attn_image(image_layer)
+    #         self.R_i_t += R_i_t_addition
+    #         self.R_i_i += R_i_i_addition
+
+
+    #         self.handle_self_attention_lang(text_layer)
+    #         R_t_i_addition, R_t_t_addition = self.handle_co_attn_lang(text_layer)
+    #         self.R_t_i += R_t_i_addition
+    #         self.R_t_t += R_t_t_addition
+    #         # cam_i_t = image_layer.crossattention.self.get_attention_map().detach()
+    #         # cam_i_i = image_layer.attention.self.get_attention_map().detach()
+
+    #         # cam_t_i = text_layer.crossattention.self.get_attention_map().detach()
+    #         # cam_t_t = text_layer.attention.self.get_attention_map().detach()
+
+
+
+    #         x, y = x1[0], y1[0]
+    #         all_text_feats.append(x.detach().clone())
+    #         all_image_feats.append(y.detach().clone())
+    #         # print(y.shape)
+
+    #     text_feats, image_feats = x, y
+    #     cls_feats_text = self.cross_modal_text_pooler(x)
+    #     if self.is_clip:
+    #         cls_feats_image = self.cross_modal_image_pooler(y)
+    #     else:
+    #         avg_image_feats = self.avgpool(image_feats.transpose(1, 2)).view(image_feats.size(0), 1, -1)
+    #         cls_feats_image = self.cross_modal_image_pooler(avg_image_feats)
+    #     cls_feats = torch.cat([cls_feats_text, cls_feats_image], dim=-1)
+
+    #     # print("helloooooooooooooooooooooooooooooooooooooo")
+    #     ret = {
+    #         "text_feats": text_feats,
+    #         "image_feats": image_feats,
+    #         "cls_feats": cls_feats,
+    #         "text_labels": text_labels,
+    #         "text_ids": text_ids,
+    #         "text_masks": text_masks,
+    #         "all_text_feats": all_text_feats,
+    #         "all_image_feats": all_image_feats
+    #     }
+
+
+    #     return ret
+
+
+
+
+
     def infer(
         self,
         batch,
@@ -201,6 +322,7 @@ class METERTransformerSS(pl.LightningModule):
         text_embeds = self.cross_modal_text_transform(text_embeds)
 
         image_embeds = self.vit_model(img)
+        # image_embeds = image_embeds[:, :401, :] # baka 
         # print(f"IN INFERRRRRRRRRRRRRRRRRRR: {image_embeds.shape}")
 
         image_embeds = self.cross_modal_image_transform(image_embeds)
@@ -214,6 +336,11 @@ class METERTransformerSS(pl.LightningModule):
                 torch.full_like(image_masks, image_token_type_idx)
             ),
         )
+
+
+        print(f"Text embeddings shape in infer: {text_embeds.shape}")
+        print(f"device: {device}")
+
 
         x, y = text_embeds, image_embeds
         all_text_feats, all_image_feats = [], []

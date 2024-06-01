@@ -234,17 +234,22 @@ class BertSelfAttention(nn.Module):
             self.distance_embedding = nn.Embedding(2 * config.max_position_embeddings - 1, self.attention_head_size)
 
         self.is_decoder = config.is_decoder
+        self.attn_gradients = None
 
     def save_attn_gradients(self, attn_gradients):
+        # print("here in saving grads")
         self.attn_gradients = attn_gradients
         
-    def get_attn_gradients(self):
+    def get_attn_gradients(self): #baka
+        # print(f"cross attn gradients shape: {self.attn_gradients.shape}")
         return self.attn_gradients
     
     def save_attention_map(self, attention_map):
+        # print(f"cross attn map shape: {attention_map.shape}")
         self.attention_map = attention_map
         
-    def get_attention_map(self):
+    def get_attention_map(self): #baka
+        # print(f"cross attn map shape: {self.attention_map.shape}")
         return self.attention_map
     
 
@@ -328,10 +333,12 @@ class BertSelfAttention(nn.Module):
         # Normalize the attention scores to probabilities.
         attention_probs = nn.Softmax(dim=-1)(attention_scores)
 
-        #if True:
-        if False:
-            self.save_attention_map(attention_probs)
-            attention_probs.register_hook(self.save_attn_gradients) 
+        # if True:
+        # if False:
+        # attention_probs = attention_probs.requires_grad_(True)
+        self.save_attention_map(attention_probs)
+        attention_probs.register_hook(self.save_attn_gradients) 
+        # print("here")
 
         # This is actually dropping out entire tokens to attend to, which might
         # seem a bit unusual, but is taken from the original Transformer paper.
@@ -413,6 +420,7 @@ class BertAttention(nn.Module):
             output_attentions,
         )
         attention_output = self.output(self_outputs[0], hidden_states)
+        # print("hello")
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
         return outputs
 
@@ -446,7 +454,7 @@ class BertOutput(nn.Module):
         return hidden_states
 
 
-class BertCrossLayer(nn.Module):
+class BertCrossLayer(nn.Module): #imp baka
     def __init__(self, config):
         super().__init__()
         self.chunk_size_feed_forward = config.chunk_size_feed_forward
@@ -454,7 +462,7 @@ class BertCrossLayer(nn.Module):
         self.attention = BertAttention(config)
         self.is_decoder = config.is_decoder
         self.add_cross_attention = config.add_cross_attention
-        self.crossattention = BertAttention(config)
+        self.crossattention = BertAttention(config) #baka
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
 

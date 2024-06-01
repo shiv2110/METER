@@ -88,6 +88,7 @@ def config():
     load_path = ""
     num_workers = 8
     precision = 32
+    method_type = ""
 
 
 @ex.named_config
