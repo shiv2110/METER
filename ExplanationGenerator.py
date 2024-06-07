@@ -124,9 +124,9 @@ class GenerateOurs:
             self.R_t_t[0, 0] = 0
             self.R_i_t[0, 0] = 0 #baka
         # return self.R_i_t, self.R_t_i #baka
-        return self.R_t_i.T, self.R_i_t.T #baka
+        # return self.R_t_t, self.R_t_i #baka
 
-        # return self.R_t_t, self.R_i_t.T #baka
+        return self.R_t_t, self.R_i_i #baka
     
     
     def gradcam(self, cam, grad):

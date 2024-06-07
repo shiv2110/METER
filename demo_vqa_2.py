@@ -86,16 +86,16 @@ def main(_config):
 
         batch = {"text": [text], "image": [img]}
 
-        with torch.no_grad():
-            encoded = tokenizer(batch["text"])
-            # print(batch['text'])
-            text_tokens = tokenizer.tokenize(batch["text"][0])
-            print(text_tokens)
-            batch["text_ids"] = torch.tensor(encoded["input_ids"]).to(device)
-            batch["text_labels"] = torch.tensor(encoded["input_ids"]).to(device)
-            batch["text_masks"] = torch.tensor(encoded["attention_mask"]).to(device)
-            ret = model.infer(batch)
-            vqa_logits = model.vqa_classifier(ret["cls_feats"])
+        # with torch.no_grad():
+        encoded = tokenizer(batch["text"])
+        # print(batch['text'])
+        text_tokens = tokenizer.tokenize(batch["text"][0])
+        print(text_tokens)
+        batch["text_ids"] = torch.tensor(encoded["input_ids"]).to(device)
+        batch["text_labels"] = torch.tensor(encoded["input_ids"]).to(device)
+        batch["text_masks"] = torch.tensor(encoded["attention_mask"]).to(device)
+        ret = model.infer(batch)
+        vqa_logits = model.vqa_classifier(ret["cls_feats"])
 
         answer = id2ans[str(vqa_logits.argmax().item())]
 

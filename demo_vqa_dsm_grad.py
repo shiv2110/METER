@@ -20,7 +20,7 @@ from PIL import Image
 from meter.config import ex
 from meter.modules import METERTransformerSS
 
-from meter.transforms import vit_transform, clip_transform, clip_transform_randaug, pixelbert_transform
+from meter.transforms import vit_transform, clip_transform, clip_transform_randaug
 from meter.datamodules.datamodule_base import get_pretrained_tokenizer
 from scipy.stats import skew
 
@@ -83,8 +83,6 @@ def main(_config):
                 image = Image.open(url)
             orig_shape = np.array(image).shape
             img = clip_transform(size=IMG_SIZE)(image)
-            # img = pixelbert_transform(size=IMG_SIZE)(image)
-
             # img = vit_transform(size=IMG_SIZE)(image)
             # img = clip_transform_randaug(size=IMG_SIZE)(image)
             # print("transformed image shape: {}".format(img.shape))
@@ -113,11 +111,17 @@ def main(_config):
 
         # print( model.cross_modal_text_layers[0].crossattention.self.get_attn_gradients().detach() )
         answer = id2ans[str(vqa_logits.argmax().item())]
-        # ours = GenerateOurs(model)
-        # R_t_t, 
+        output = vqa_logits
+        index = np.argmax(output.cpu().data.numpy(), axis=-1)
+        one_hot = np.zeros((1, output.size()[-1]), dtype=np.float32)
+        one_hot[0, index] = 1
+        one_hot_vector = one_hot
+        one_hot = torch.from_numpy(one_hot).requires_grad_(True)
+        one_hot = torch.sum(one_hot * output) #baka
 
-        # print(f"{ret['image_feats'][0].shape, ret['']}")
-        return answer, ret['image_feats'][0], ret['text_feats'][0], img, text_tokens
+        model.zero_grad()
+        one_hot.backward(retain_graph=True)
+        return answer, ret['all_image_feats'][0], ret['all_text_feats'][0], img, text_tokens
     
 
 
@@ -130,39 +134,31 @@ def main(_config):
     # question = "What animal hat did she wear?"
     # question = "What is the colour of the bird's feet?"
     # question = "is there a lamppost?"
-    question = "Is there a laptop?"
+    # question = "Is there a laptop?"
     # question = "Did she wear a wristwatch?"
     # question = "What is the girl in white doing?"
-    # question = "Is there construction going on?"
-    # question = "How many lampposts are there?"
-    # question = "What is the bird in the image?"
-    # question = "Where is the girl sitting?"
+    question = "Is there construction going on?"
     # question = "What is the time on the clock?"
 
 
 
 
 
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('../../nii_depressed.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/skii.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/clock_owl.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/swim.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/cows.jpg', question) #localisation
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/weird_dj.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/nee-sama.jpeg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/bird.jpg', question) #localisation
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/train.jpg', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/shiv.png', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/demon.png', question)
+    # result, all_image_feats, all_text_feats, image, text_tokens = infer('images/time.jpg', question)
 
+    result, all_image_feats, all_text_feats, image, text_tokens = infer('images/buildings.jpg', question)
 
-    # result, image_feats, text_feats, image, text_tokens = infer('../../nii_depressed.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/skii.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/clock_owl.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/time.jpg', question)
-
-    # result, image_feats, text_feats, image, text_tokens = infer('images/buildings.jpg', question)
-
-    # result, image_feats, text_feats, image, text_tokens = infer('images/swim.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/cows.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/weird_dj.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/shore.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/bedroom.jpg', question)
-
-    # result, image_feats, text_feats, image, text_tokens = infer('images/nee-sama.jpeg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/bird.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/train.jpg', question)
-    result, image_feats, text_feats, image, text_tokens = infer('images/shiv.png', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/demon.png', question)
 
 
 
@@ -177,77 +173,99 @@ def main(_config):
     # feats = feats[1:, :]
 
 
-    def get_eigen (feats, modality):
-        feats = F.normalize(feats.detach(), p = 2, dim = -1)
-        W_feat = (feats @ feats.T)
+    def get_eigen (feat_list, modality):
+        fevs = []
+        for i, feats in enumerate(feat_list):
+            if modality == 'image':
+                # print(f"FEATS SHAPE: {feats.size()}")
+                feats = F.normalize(feats.detach(), p = 2, dim = -1)[1:, :]
+                # feats = feats[0][1:, :]
+            else:
+                # feats = feats[0][1:-1]
+                feats = F.normalize(feats.detach(), p = 2, dim = -1)[1:-1]
 
-        W_feat = (W_feat * (W_feat > 0))
-        W_feat = W_feat / W_feat.max() 
-        W_feat = W_feat.cpu().detach().numpy()
+            W_feat = (feats @ feats.T)
 
-        def get_diagonal (W):
-            D = row_sum(W)
-            D[D < 1e-12] = 1.0  # Prevent division by zero.
-            D = diags(D)
-            return D
-        
-        D = np.array(get_diagonal(W_feat).todense())
+            W_feat = (W_feat * (W_feat > 0))
+            W_feat = W_feat / W_feat.max() 
+            W_feat = W_feat.cpu().detach().numpy()
 
-        L = D - W_feat
+            def get_diagonal (W):
+                D = row_sum(W)
+                D[D < 1e-12] = 1.0  # Prevent division by zero.
+                D = diags(D)
+                return D
+            
+            D = np.array(get_diagonal(W_feat).todense())
+
+            L = D - W_feat
         # print(L)
         # print("here")
         # L[ np.isnan(L) ] = 0
         # L[ L == np.inf ] = 0
-        try:
-            eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', sigma = -0.5, M = D)
-        except:
             try:
-                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'SM', sigma = -0.5, M = D)
+                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', sigma = -0.5, M = D)
             except:
-                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', M = D)
+                try:
+                    eigenvalues, eigenvectors = eigs(L, k = 5, which = 'SM', sigma = -0.5, M = D)
+                except:
+                    eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', M = D)
 
 
         
 
 
-        eigenvalues, eigenvectors = torch.from_numpy(eigenvalues), torch.from_numpy(eigenvectors.T).float()
-        n_tuple = torch.kthvalue(eigenvalues.real, 2)
-        fev_idx = n_tuple.indices
-        fev = eigenvectors[fev_idx]
-        if modality == "text":
-            fev = torch.cat( ( torch.zeros(1), fev, torch.zeros(1) ) )
-        return fev
-    # # image_relevance = eigenvectors[1, 1:] 
-    image_relevance = torch.abs(get_eigen(image_feats[1:, :], "image"))
+            eigenvalues, eigenvectors = torch.from_numpy(eigenvalues), torch.from_numpy(eigenvectors.T).float()
+            n_tuple = torch.kthvalue(eigenvalues.real, 2)
+                    # print(f"N_Tuple: {n_tuple.indices}")
+            fev_idx = n_tuple.indices
+            fev = torch.abs(eigenvectors[fev_idx])
+            if modality == 'image':
+                grad = model.cross_modal_image_layers[i].attention.self.get_attn_gradients().detach()
+                grad = grad[:, :, 1:, 1:]
+                grad = grad.reshape(-1, grad.shape[-2], grad.shape[-1])
+                grad = grad.clamp(min=0).mean(dim=0)
+                # print(f"GRAD SHAPE: {grad.size()}")
+                fev = fev.to(model.device)
+                fev = grad @ fev.unsqueeze(1)
+                fev = fev[:, 0]
+            else:
+                grad = model.cross_modal_text_layers[i].attention.self.get_attn_gradients().detach()
+                grad = grad[:, :, 1:-1, 1:-1]
+                grad = grad.reshape(-1, grad.shape[-2], grad.shape[-1])
+                grad = grad.clamp(min=0).mean(dim=0)
+                # print(f"GRAD SHAPE: {grad.size()}")
+                fev = fev.to(model.device)
+                fev = grad @ fev.unsqueeze(1)
+                fev = fev[:, 0]
+                # if modality == 'text':
+                    # print(grad)
+                fev = torch.cat( ( torch.zeros(1), fev, torch.zeros(1) ) )
+            fevs.append( torch.abs(fev) )
+        return fevs
+
+
+    # print(f"ALL IMAGE FEATS: {len(all_image_feats)}")
+    image_relevances = get_eigen(all_image_feats, "image")
+    image_relevance = torch.stack(image_relevances, dim=0).sum(dim=0)
 
     # print()
-    text_relevance = torch.abs(get_eigen(text_feats[1:-1], "text"))
+    text_relevances = get_eigen(all_text_feats, "text")
+    text_relevance = torch.stack(text_relevances, dim=0).sum(dim=0)
+
     # text_relevance = get_eigen(text_feats[1:-1])
-    print(text_relevance)
-    # text_relevance = torch.abs(text_relevance)
-    # plt.title("Spectral Approach word impotance")
-    # plt.xticks(np.arange(len(text_tokens)), text_tokens)
-    # plt.imshow(text_relevance.unsqueeze(dim = 0).numpy())
-    # plt.colorbar(orientation = "horizontal")
+    # print(text_relevance)
 
-    # skew_vec = []
-    # for obj_feat in W_feat:
-    #     skew_vec.append(skew(obj_feat))
-        
-    # skew_vec = np.array(skew_vec)
 
-    # fev, nfev = eigenvectors[1], (eigenvectors[1] * -1)
-    # k1, k2 = fev.topk(k = 1).indices[0], nfev.topk(k = 1).indices[0]
 
-    # image_relevance = nfev
-    # if skew_vec[k1] <= 0 and skew_vec[k2] > 0:
-    #     image_relevannce = fev
-    # elif skew_vec[k1] > 0 and skew_vec[k2] <= 0:
-    #     image_relevannce = nfev
-    # elif skew_vec[k1] > skew_vec[k2]:
-    #     image_relevannce = fev
-    # else:
-    #     image_relevannce = nfev
+    # grad = model.cross_modal_image_layers[-4].attention.self.get_attn_gradients().detach()
+    # grad = grad.reshape(-1, grad.shape[-2], grad.shape[-1])
+    # grad = grad.clamp(min=0).mean(dim=0)[1:, 1:]
+    # image_relevance = grad @ image_relevance.unsqueeze(1)
+    # image_relevance = image_relevance[:, 0]
+    # print(image_relevance)
+
+
 
     dim = int(image_relevance.numel() ** 0.5)
     image_relevance = image_relevance.reshape(1, 1, dim, dim)
@@ -282,21 +300,14 @@ def main(_config):
 
     axs[0][1].imshow(vis)
     axs[0][1].axis('off')
-    axs[0][1].set_title('Spectral Approach Image Relevance')
+    axs[0][1].set_title('(Spectral + Grad) Image Relevance')
 
     ti = axs[1][0].imshow(text_relevance.unsqueeze(dim = 0).numpy())
-    axs[1][0].set_title("Spectral Approach Word Impotance")
+    axs[1][0].set_title("(Spectral + Grad) Word Impotance")
     plt.sca(axs[1][0])
     plt.xticks(np.arange(len(text_tokens) + 2), ['[CLS]'] + text_tokens + ['[SEP]'])
     # plt.sca(axs[1])
     plt.colorbar(ti, orientation = "horizontal", ax = axs[1][0])
-
-    # plt.imshow(text_relevance.unsqueeze(dim = 0).numpy())
-    # axs[2].set_title("Spectral Approach Word Impotance")
-    # plt.sca(axs[2])
-    # plt.xticks(np.arange(len(text_tokens) + 2), ['[CLS]'] + text_tokens + ['[SEP]'])
-    # # plt.sca(axs[1])
-    # plt.colorbar(ti, orientation = "horizontal", ax = axs[2])
 
     # axs[1].axis('off')
     # axs[1].set_title('masked')

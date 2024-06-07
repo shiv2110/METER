@@ -141,9 +141,9 @@ def main(_config):
     # question = "Is the man swimming?"
     # question = "What animals are shown?"
     # question = "What animal hat did she wear?"
-    question = "What is the colour of the bird's feet?"
+    # question = "What is the colour of the bird's eye?"
     # question = "is there a train?"
-    # question = "Is there a laptop?"
+    question = "Is there a laptop?"
     # question = "Did she wear a wristwatch?"
     # question = "What is the girl in white doing?"
 
@@ -155,9 +155,9 @@ def main(_config):
     # result, R_t_t, R_t_i, image, text_tokens = infer('images/cows.jpg', question)
     # result, R_t_t, R_t_i, image, text_tokens = infer('images/weird_dj.jpg', question)
     # result, R_t_t, R_t_i, image, text_tokens = infer('images/nee-sama.jpeg', question)
-    result, R_t_t, R_t_i, image, text_tokens = infer('images/bird.jpg', question)
+    # result, R_t_t, R_t_i, image, text_tokens = infer('images/bird.jpg', question)
     # result, R_t_t, R_t_i, image, text_tokens = infer('images/train.jpg', question)
-    # result, R_t_t, R_t_i, image, text_tokens = infer('images/shiv.png', question)
+    result, R_t_t, R_t_i, image, text_tokens = infer('images/shiv.png', question)
     # result, R_t_t, R_t_i, image, text_tokens = infer('images/demon.png', question)
 
 
