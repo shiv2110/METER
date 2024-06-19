@@ -21,7 +21,7 @@ import os
 import warnings
 from dataclasses import dataclass
 from typing import Optional, Tuple
-
+from .layers import *
 import torch
 import torch.utils.checkpoint
 from torch import nn
@@ -181,6 +181,9 @@ class BertEmbeddings(nn.Module):
         self.register_buffer("position_ids", torch.arange(config.max_position_embeddings).expand((1, -1)))
         self.position_embedding_type = getattr(config, "position_embedding_type", "absolute")
 
+        self.add1 = Add()
+        self.add2 = Add()
+
     def forward(
         self, input_ids=None, token_type_ids=None, position_ids=None, inputs_embeds=None, past_key_values_length=0
     ):
@@ -208,6 +211,15 @@ class BertEmbeddings(nn.Module):
         embeddings = self.LayerNorm(embeddings)
         embeddings = self.dropout(embeddings)
         return embeddings
+    
+    def relprop(self, cam, **kwargs):
+        cam = self.dropout.relprop(cam, **kwargs)
+        cam = self.LayerNorm.relprop(cam, **kwargs)
+
+        # [inputs_embeds, position_embeddings, token_type_embeddings]
+        (cam) = self.add2.relprop(cam, **kwargs)
+
+        return cam
 
 
 class BertSelfAttention(nn.Module):
@@ -235,6 +247,16 @@ class BertSelfAttention(nn.Module):
 
         self.is_decoder = config.is_decoder
         self.attn_gradients = None
+        self.attn_cam = None
+
+        self.matmul1 = MatMul()
+        self.matmul2 = MatMul()
+        self.softmax = Softmax(dim=-1)
+        self.add = Add()
+        self.mul = Mul()
+        self.head_mask = None
+        self.attention_mask = None
+        self.clone = Clone()
 
     def save_attn_gradients(self, attn_gradients):
         # print("here in saving grads")
@@ -251,13 +273,21 @@ class BertSelfAttention(nn.Module):
     def get_attention_map(self): #baka
         # print(f"cross attn map shape: {self.attention_map.shape}")
         return self.attention_map
-    
 
+    def save_attn_cam(self, attn_cam): # for lrp
+        self.attn_cam = attn_cam
+
+    def get_attn_cam(self): # for lrp
+        return self.attn_cam
 
     def transpose_for_scores(self, x):
         new_x_shape = x.size()[:-1] + (self.num_attention_heads, self.attention_head_size)
         x = x.view(*new_x_shape)
         return x.permute(0, 2, 1, 3)
+
+    def transpose_for_scores_relprop(self, x):
+        return x.permute(0, 2, 1, 3).flatten(2)
+
 
     def forward(
         self,
@@ -360,6 +390,47 @@ class BertSelfAttention(nn.Module):
             outputs = outputs + (past_key_value,)
         return outputs
 
+    # def relprop(self, cam, **kwargs):
+    #     # Assume output_attentions == False
+    #     cam = self.transpose_for_scores(cam)
+
+    #     # [attention_probs, value_layer]
+    #     (cam1, cam2) = self.matmul2.relprop(cam, **kwargs)
+    #     cam1 /= 2
+    #     cam2 /= 2
+
+    #     self.save_attn_cam(cam1)
+
+    #     cam1 = self.dropout.relprop(cam1, **kwargs)
+
+    #     cam1 = self.softmax.relprop(cam1, **kwargs)
+
+    #     if self.attention_mask is not None:
+    #         # [attention_scores, attention_mask]
+    #         (cam1, _) = self.add.relprop(cam1, **kwargs)
+
+    #     # [query_layer, key_layer.transpose(-1, -2)]
+    #     (cam1_1, cam1_2) = self.matmul1.relprop(cam1, **kwargs)
+    #     cam1_1 /= 2
+    #     cam1_2 /= 2
+
+    #     # query
+    #     cam1_1 = self.transpose_for_scores_relprop(cam1_1)
+    #     cam1_1 = self.query.relprop(cam1_1, **kwargs)
+
+    #     # key
+    #     cam1_2 = self.transpose_for_scores_relprop(cam1_2.transpose(-1, -2))
+    #     cam1_2 = self.key.relprop(cam1_2, **kwargs)
+
+    #     # value
+    #     cam2 = self.transpose_for_scores_relprop(cam2)
+    #     cam2 = self.value.relprop(cam2, **kwargs)
+
+    #     cam = self.clone.relprop((cam1_2, cam2), **kwargs)
+
+    #     # returning two cams- one for the hidden state and one for the context
+    #     return (cam1_1, cam)
+
 
 class BertSelfOutput(nn.Module):
     def __init__(self, config):
@@ -368,11 +439,23 @@ class BertSelfOutput(nn.Module):
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
 
+        # self.add1 = Add()
+        self.add = Add()
+
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.dropout(hidden_states)
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
+
+    # def relprop(self, cam, **kwargs):
+    #     cam = self.LayerNorm.relprop(cam, **kwargs)
+    #     # [hidden_states, input_tensor]
+    #     (cam1, cam2) = self.add.relprop(cam, **kwargs)
+    #     cam1 = self.dropout.relprop(cam1, **kwargs)
+    #     cam1 = self.dense.relprop(cam1, **kwargs)
+
+    #     return (cam1, cam2)
 
 
 class BertAttention(nn.Module):
@@ -400,6 +483,8 @@ class BertAttention(nn.Module):
         self.self.all_head_size = self.self.attention_head_size * self.self.num_attention_heads
         self.pruned_heads = self.pruned_heads.union(heads)
 
+        self.clone = Clone()
+
     def forward(
         self,
         hidden_states,
@@ -423,6 +508,16 @@ class BertAttention(nn.Module):
         # print("hello")
         outputs = (attention_output,) + self_outputs[1:]  # add attentions if we output them
         return outputs
+    
+
+    # def relprop(self, cam, **kwargs):
+    #     cam_output, cam_inp3 = self.output.relprop(cam, **kwargs)
+    #     cam_inp1, cam_inp2 = self.self.relprop(cam_output, **kwargs)
+    #     cam_inp = self.clone.relprop((cam_inp1, cam_inp2, cam_inp3), **kwargs)
+
+    #     return cam_inp
+
+
 
 
 class BertIntermediate(nn.Module):
@@ -438,6 +533,11 @@ class BertIntermediate(nn.Module):
         hidden_states = self.dense(hidden_states)
         hidden_states = self.intermediate_act_fn(hidden_states)
         return hidden_states
+    
+    # def relprop(self, cam, **kwargs):
+    #     cam = self.intermediate_act_fn.relprop(cam, **kwargs)
+    #     cam = self.dense.relprop(cam, **kwargs)
+    #     return cam
 
 
 class BertOutput(nn.Module):
@@ -446,6 +546,7 @@ class BertOutput(nn.Module):
         self.dense = nn.Linear(config.intermediate_size, config.hidden_size)
         self.LayerNorm = nn.LayerNorm(config.hidden_size, eps=config.layer_norm_eps)
         self.dropout = nn.Dropout(config.hidden_dropout_prob)
+        self.add = Add()
 
     def forward(self, hidden_states, input_tensor):
         hidden_states = self.dense(hidden_states)
@@ -453,6 +554,14 @@ class BertOutput(nn.Module):
         hidden_states = self.LayerNorm(hidden_states + input_tensor)
         return hidden_states
 
+    # def relprop(self, cam, **kwargs):
+    #     cam = self.LayerNorm.relprop(cam, **kwargs)
+    #     # [hidden_states, input_tensor]
+    #     (cam1, cam2)= self.add.relprop(cam, **kwargs)
+    #     cam1 = self.dropout.relprop(cam1, **kwargs)
+    #     cam1 = self.dense.relprop(cam1, **kwargs)
+    #     return (cam1, cam2)
+    
 
 class BertCrossLayer(nn.Module): #imp baka
     def __init__(self, config):
@@ -465,6 +574,8 @@ class BertCrossLayer(nn.Module): #imp baka
         self.crossattention = BertAttention(config) #baka
         self.intermediate = BertIntermediate(config)
         self.output = BertOutput(config)
+
+        self.clone = Clone()
 
     def forward(
         self,
@@ -512,6 +623,13 @@ class BertCrossLayer(nn.Module): #imp baka
         intermediate_output = self.intermediate(attention_output)
         layer_output = self.output(intermediate_output, attention_output)
         return layer_output
+    
+    # def relprop(self, cam, **kwargs):
+    #     (cam1, cam2) = self.output.relprop(cam, **kwargs)
+    #     cam1 = self.intermediate.relprop(cam1, **kwargs)
+    #     cam = self.clone.relprop((cam1, cam2), **kwargs)
+    #     cam = self.attention.relprop(cam, **kwargs)
+    #     return cam
 
 
 class BertEncoder(nn.Module):
@@ -609,6 +727,18 @@ class BertEncoder(nn.Module):
             attentions=all_self_attentions,
             cross_attentions=all_cross_attentions,
         )
+    
+    # def relprop(self, cam, **kwargs):
+    #     cam_lang, cam_vis = cam
+    #     # for layer_module in reversed(self.x_layers):
+    #     #     cam_lang, cam_vis = layer_module.relprop((cam_lang, cam_vis), **kwargs)
+
+    #     # for layer_module in reversed(self.r_layers):
+    #     #     cam_vis = layer_module.relprop(cam_vis, **kwargs)
+
+    #     for layer_module in reversed(self.layer):
+    #         cam_lang = layer_module.relprop(cam_lang, **kwargs)
+    #     return cam_lang, cam_vis
 
 
 class BertPooler(nn.Module):
@@ -979,6 +1109,11 @@ class BertModel(BertPreTrainedModel):
             attentions=encoder_outputs.attentions,
             cross_attentions=encoder_outputs.cross_attentions,
         )
+    # def relprop(self, cam, **kwargs):
+    #     cam_lang, cam_vis = cam
+    #     cam_lang = self.pooler.relprop(cam_lang, **kwargs)
+    #     cam_lang, cam_vis = self.encoder.relprop((cam_lang, cam_vis), **kwargs)
+    #     return cam_lang, cam_vis
 
 
 @add_start_docstrings(
@@ -1795,3 +1930,9 @@ class BertForQuestionAnswering(BertPreTrainedModel):
             hidden_states=outputs.hidden_states,
             attentions=outputs.attentions,
         )
+    
+    # def relprop(self, cam, **kwargs):
+    #     cam_lang = self.qa_outputs.relprop(cam, **kwargs)
+    #     cam_vis = torch.zeros(self.vis_shape).to(cam_lang.device)
+    #     cam_lang, cam_vis = self.bert.relprop((cam_lang, cam_vis), **kwargs)
+    #     return cam_lang, cam_vis

@@ -1,6 +1,17 @@
 import torch
+import copy
 
-
+def compute_rollout_attention(all_layer_matrices, start_layer=0):
+    # adding residual consideration
+    num_tokens = all_layer_matrices[0].shape[1]
+    eye = torch.eye(num_tokens).to(all_layer_matrices[0].device)
+    all_layer_matrices = [all_layer_matrices[i] + eye for i in range(len(all_layer_matrices))]
+    matrices_aug = [all_layer_matrices[i] / all_layer_matrices[i].sum(dim=-1, keepdim=True)
+                          for i in range(len(all_layer_matrices))]
+    joint_attention = matrices_aug[start_layer]
+    for i in range(start_layer+1, len(matrices_aug)):
+        joint_attention = matrices_aug[i].matmul(joint_attention)
+    return joint_attention
 
 
 def avg_heads(cam, grad):
@@ -121,8 +132,8 @@ class GenerateOurs:
             count += 1
             # if count == 1:
                 # break
-            self.R_t_t[0, 0] = 0
-            self.R_i_t[0, 0] = 0 #baka
+        self.R_t_t[0, 0] = 0
+        self.R_i_i[0, 0] = 0 #baka
         # return self.R_i_t, self.R_t_i #baka
         # return self.R_t_t, self.R_t_i #baka
 
@@ -193,3 +204,84 @@ class GenerateOurs:
 
         self.R_t_t[0, 0] = 0
         return self.R_t_t, self.R_t_i
+    
+
+    def generate_rollout (self, text_tokens, image_tokens, device):
+
+        self.R_t_t = torch.eye(text_tokens, text_tokens).to(device)
+        # image self attention matrix
+        self.R_i_i = torch.eye(image_tokens, image_tokens).to(device)
+        # impact of images on text
+        self.R_t_i = torch.zeros(text_tokens, image_tokens).to(device)
+        # impact of text on images
+        self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)
+
+        cams_text = []
+        cams_image = []
+
+        for text_layer in self.model.cross_modal_text_layers:
+            cam = text_layer.attention.self.get_attention_map().detach()
+            cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)
+            cams_text.append(cam)
+
+        for image_layer in self.model.cross_modal_image_layers:
+            cam = image_layer.attention.self.get_attention_map().detach()
+            cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)
+            cams_image.append(cam)    
+
+        # for text_layer, image_layer in zip(self.model.cross_modal_text_layers, self.model.cross_modal_image_layers):    
+        self.R_t_t = compute_rollout_attention(copy.deepcopy(cams_text))
+        self.R_i_i = compute_rollout_attention(cams_image)
+        cam_t_i = self.model.cross_modal_text_layers[-1].crossattention.self.get_attention_map().detach()
+        cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
+        self.R_t_i = torch.matmul(self.R_t_t.t(), torch.matmul(cam_t_i, self.R_i_i))
+
+
+        self.R_t_t[0, 0] = 0
+        # self.R_t_i[0, 0] = 0
+        return self.R_t_t, self.R_t_i
+
+    # def generate_lrp(self, text_tokens, image_tokens, device):
+    #     self.R_t_t = torch.eye(text_tokens, text_tokens).to(device)
+    #     # image self attention matrix
+    #     self.R_i_i = torch.eye(image_tokens, image_tokens).to(device)
+    #     # impact of images on text
+    #     self.R_t_i = torch.zeros(text_tokens, image_tokens).to(device)
+    #     # impact of text on images
+    #     self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)
+
+    #     cam_t_i = self.model.cross_modal_text_layers[-1].crossattention.self.get_attn_cam().detach()
+    #     cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
+    #     self.R_t_i = cam_t_i
+
+    #     cam = self.model.cross_modal_text_layers[-1].attention.self.get_attn_cam().detach()
+    #     cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)
+    #     self.R_t_t = cam
+
+    #     self.R_t_t = (self.R_t_t - self.R_t_t.min()) / (self.R_t_t.max() - self.R_t_t.min())
+    #     self.R_t_i = (self.R_t_i - self.R_t_i.min()) / (self.R_t_i.max() - self.R_t_i.min())
+    #     # disregard the [CLS] token itself
+    #     self.R_t_t[0, 0] = 0
+    #     return self.R_t_t, self.R_t_i
+
+    def generate_raw_attn (self, text_tokens, image_tokens, device):
+        self.R_t_t = torch.eye(text_tokens, text_tokens).to(device)
+        # image self attention matrix
+        self.R_i_i = torch.eye(image_tokens, image_tokens).to(device)
+        # impact of images on text
+        self.R_t_i = torch.zeros(text_tokens, image_tokens).to(device)
+        # impact of text on images
+        self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)      
+
+        cam_t_i = self.model.cross_modal_text_layers[-1].crossattention.self.get_attention_map().detach()
+        cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
+        self.R_t_i = cam_t_i
+
+        cam = self.model.cross_modal_text_layers[-1].attention.self.get_attention_map().detach()
+        cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)
+        self.R_t_t = cam  
+
+        self.R_t_t[0, 0] = 0
+        return self.R_t_t, self.R_t_i
+
+

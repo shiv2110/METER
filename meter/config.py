@@ -2,6 +2,7 @@ from sacred import Experiment
 
 ex = Experiment("METER")
 
+# from param import args
 
 def _loss_names(d):
     ret = {
@@ -22,6 +23,7 @@ def _loss_names(d):
 
 @ex.config
 def config():
+    # args = args
     exp_name = "meter"
     seed = 0
     datasets = ["coco", "vg", "sbu", "gcc"]
@@ -36,6 +38,9 @@ def config():
     draw_false_image = 1
     image_only = False
     resolution_before = 576
+
+
+    # args = args
 
     # Text Setting
     vqav2_label_size = 3129
@@ -77,18 +82,24 @@ def config():
     resume_from = None
     fast_dev_run = False
     val_check_interval = 1.0
-    test_only = False
+    test_only = True
 
     # below params varies with the environment
     data_root = ""
     log_dir = "result"
     per_gpu_batchsize = 0  # you should define this manually with per_gpu_batch_size=#
-    num_gpus = 8
+    num_gpus = 1
     num_nodes = 1
-    load_path = ""
+    load_path = "meter_clip16_288_roberta_vqa.ckpt"
     num_workers = 8
     precision = 32
     method_type = ""
+
+    method_name = ""
+    modality = ""
+    test_type = ""
+    is_positive_pert = ""
+    COCO_path = ""
 
 
 @ex.named_config
@@ -302,3 +313,7 @@ def imagenet_randaug():
 @ex.named_config
 def clip_randaug():
     train_transform_keys = ["clip_randaug"]
+
+
+# if __name__ == "__main__":
+    # ex.run_commandline()

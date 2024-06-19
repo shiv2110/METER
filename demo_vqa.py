@@ -24,7 +24,8 @@ from meter.transforms import vit_transform, clip_transform, clip_transform_randa
 from meter.datamodules.datamodule_base import get_pretrained_tokenizer
 from scipy.stats import skew
 
-from ExplanationGenerator import GenerateOurs
+# from ExplanationGenerator import GenerateOurs
+from spectral.get_fev import get_eigs
 
 
 @ex.automain
@@ -121,7 +122,7 @@ def main(_config):
     
 
 
-    # question = "What is the colour of her pants?"
+    question = "What is she holding?"
     # question = "Does he have earphones plugged in?"
     # question = "Does he have spectacles?"
     # question = "Is there an owl?"
@@ -130,41 +131,47 @@ def main(_config):
     # question = "What animal hat did she wear?"
     # question = "What is the colour of the bird's feet?"
     # question = "is there a lamppost?"
-    question = "Is there a laptop?"
+    # question = "Is there a laptop?"
     # question = "Did she wear a wristwatch?"
     # question = "What is the girl in white doing?"
     # question = "Is there construction going on?"
-    # question = "How many lampposts are there?"
+    # question = "How many street lights are there?"
     # question = "What is the bird in the image?"
     # question = "Where is the girl sitting?"
     # question = "What is the time on the clock?"
-
-
+    # question = "What does the sign board say?"
+    # question = "What traffic sign is it?"
+    # question = "is the text '02' in the image?"
+    # question = "What make is the laptop?"
+    # question = "Is the power connected to the laptop?"
+    # question = "Is he wearing glasses?"
+    # question = "What animal is the candle?"
 
 
 
 
 
     # result, image_feats, text_feats, image, text_tokens = infer('../../nii_depressed.jpg', question)
-    # result, image_feats, text_feats, image, text_tokens = infer('images/skii.jpg', question)
+    result, image_feats, text_feats, image, text_tokens = infer('images/skii.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/clock_owl.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/time.jpg', question)
-
     # result, image_feats, text_feats, image, text_tokens = infer('images/buildings.jpg', question)
-
     # result, image_feats, text_feats, image, text_tokens = infer('images/swim.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/cows.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/weird_dj.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/shore.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/bedroom.jpg', question)
-
     # result, image_feats, text_feats, image, text_tokens = infer('images/nee-sama.jpeg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/bird.jpg', question)
     # result, image_feats, text_feats, image, text_tokens = infer('images/train.jpg', question)
-    result, image_feats, text_feats, image, text_tokens = infer('images/shiv.png', question)
+    # result, image_feats, text_feats, image, text_tokens = infer('images/shiv.png', question)
+    # result, image_feats, text_feats, image, text_tokens = infer('images/laptop.jpg', question)
+    # result, image_feats, text_feats, image, text_tokens = infer("D:/Thesis_2023-24/data/root/val2014/COCO_val2014_000000395344.jpg", question)
+
     # result, image_feats, text_feats, image, text_tokens = infer('images/demon.png', question)
-
-
+    # result, image_feats, text_feats, image, text_tokens = infer('images/stop_sign.jpeg', question)
+    # result, image_feats, text_feats, image, text_tokens = infer("D:/Thesis_2023-24/data/root/val2014/COCO_val2014_000000481214.jpg", question)
+    # result, image_feats, text_feats, image, text_tokens = infer('images/0_0_QU04029757_hr.png', question)
 
 
     # print(f"Text feats shape: {text_feats.shape}")
@@ -177,77 +184,53 @@ def main(_config):
     # feats = feats[1:, :]
 
 
-    def get_eigen (feats, modality):
-        feats = F.normalize(feats.detach(), p = 2, dim = -1)
-        W_feat = (feats @ feats.T)
+    # def get_eigen (feats, modality):
+    #     feats = F.normalize(feats.detach(), p = 2, dim = -1)
+    #     W_feat = (feats @ feats.T)
 
-        W_feat = (W_feat * (W_feat > 0))
-        W_feat = W_feat / W_feat.max() 
-        W_feat = W_feat.cpu().detach().numpy()
+    #     W_feat = (W_feat * (W_feat > 0))
+    #     W_feat = W_feat / W_feat.max() 
+    #     W_feat = W_feat.cpu().detach().numpy()
 
-        def get_diagonal (W):
-            D = row_sum(W)
-            D[D < 1e-12] = 1.0  # Prevent division by zero.
-            D = diags(D)
-            return D
+    #     def get_diagonal (W):
+    #         D = row_sum(W)
+    #         D[D < 1e-12] = 1.0  # Prevent division by zero.
+    #         D = diags(D)
+    #         return D
         
-        D = np.array(get_diagonal(W_feat).todense())
+    #     D = np.array(get_diagonal(W_feat).todense())
 
-        L = D - W_feat
-        # print(L)
-        # print("here")
-        # L[ np.isnan(L) ] = 0
-        # L[ L == np.inf ] = 0
-        try:
-            eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', sigma = -0.5, M = D)
-        except:
-            try:
-                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'SM', sigma = -0.5, M = D)
-            except:
-                eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', M = D)
+    #     L = D - W_feat
+    #     # print(L)
+    #     # print("here")
+    #     # L[ np.isnan(L) ] = 0
+    #     # L[ L == np.inf ] = 0
+    #     try:
+    #         eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', sigma = -0.5, M = D)
+    #     except:
+    #         try:
+    #             eigenvalues, eigenvectors = eigs(L, k = 5, which = 'SM', sigma = -0.5, M = D)
+    #         except:
+    #             eigenvalues, eigenvectors = eigs(L, k = 5, which = 'LM', M = D)
 
 
         
 
 
-        eigenvalues, eigenvectors = torch.from_numpy(eigenvalues), torch.from_numpy(eigenvectors.T).float()
-        n_tuple = torch.kthvalue(eigenvalues.real, 2)
-        fev_idx = n_tuple.indices
-        fev = eigenvectors[fev_idx]
-        if modality == "text":
-            fev = torch.cat( ( torch.zeros(1), fev, torch.zeros(1) ) )
-        return fev
-    # # image_relevance = eigenvectors[1, 1:] 
-    image_relevance = torch.abs(get_eigen(image_feats[1:, :], "image"))
+    #     eigenvalues, eigenvectors = torch.from_numpy(eigenvalues), torch.from_numpy(eigenvectors.T).float()
+    #     n_tuple = torch.kthvalue(eigenvalues.real, 2)
+    #     fev_idx = n_tuple.indices
+    #     fev = eigenvectors[fev_idx]
+    #     if modality == "text":
+    #         fev = torch.cat( ( torch.zeros(1), fev, torch.zeros(1) ) )
+    #     return fev
 
-    # print()
-    text_relevance = torch.abs(get_eigen(text_feats[1:-1], "text"))
-    # text_relevance = get_eigen(text_feats[1:-1])
-    print(text_relevance)
-    # text_relevance = torch.abs(text_relevance)
-    # plt.title("Spectral Approach word impotance")
-    # plt.xticks(np.arange(len(text_tokens)), text_tokens)
-    # plt.imshow(text_relevance.unsqueeze(dim = 0).numpy())
-    # plt.colorbar(orientation = "horizontal")
+    # image_relevance = torch.abs(get_eigen(image_feats[1:, :], "image"))
+    # text_relevance = torch.abs(get_eigen(text_feats[1:-1], "text"))
+    image_relevance = get_eigs(image_feats, "image", 5)
+    text_relevance = get_eigs(text_feats, "text", 5)
+    # print(text_relevance)
 
-    # skew_vec = []
-    # for obj_feat in W_feat:
-    #     skew_vec.append(skew(obj_feat))
-        
-    # skew_vec = np.array(skew_vec)
-
-    # fev, nfev = eigenvectors[1], (eigenvectors[1] * -1)
-    # k1, k2 = fev.topk(k = 1).indices[0], nfev.topk(k = 1).indices[0]
-
-    # image_relevance = nfev
-    # if skew_vec[k1] <= 0 and skew_vec[k2] > 0:
-    #     image_relevannce = fev
-    # elif skew_vec[k1] > 0 and skew_vec[k2] <= 0:
-    #     image_relevannce = nfev
-    # elif skew_vec[k1] > skew_vec[k2]:
-    #     image_relevannce = fev
-    # else:
-    #     image_relevannce = nfev
 
     dim = int(image_relevance.numel() ** 0.5)
     image_relevance = image_relevance.reshape(1, 1, dim, dim)
@@ -269,8 +252,6 @@ def main(_config):
     vis = show_cam_on_image(image, image_relevance)
     vis = np.uint8(255 * vis)
     vis = cv2.cvtColor(np.array(vis), cv2.COLOR_RGB2BGR)
-
-
 
 
     fig, axs = plt.subplots(ncols=2, nrows=2, figsize=(15, 5))

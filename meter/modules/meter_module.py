@@ -10,8 +10,16 @@ from . import heads, objectives, meter_utils
 from .clip_model import build_model, adapt_position_encoding
 from .swin_helpers import swin_adapt_position_encoding
 from transformers import RobertaConfig, RobertaModel
+from .layers import *
 
+# class METERVisualAnswerHead():
+#     def __init__(self, logit_fc):
+#         self.logit_fc = logit_fc
 
+#     def relprop(self, cam, **kwargs):
+#         for m in reversed(self.logit_fc._modules.values()):
+#             cam = m.relprop(cam, **kwargs)
+#         return cam
 
 class METERTransformerSS(pl.LightningModule):
     def __init__(self, config):
@@ -105,12 +113,18 @@ class METERTransformerSS(pl.LightningModule):
 
         if self.hparams.config["loss_names"]["vqa"] > 0:
             vs = self.hparams.config["vqav2_label_size"]
-            self.vqa_classifier = nn.Sequential(
+            self.vqa_classifier = nn.Sequential( #baka
                 nn.Linear(hs * 2, hs * 2),
                 nn.LayerNorm(hs * 2),
                 nn.GELU(),
                 nn.Linear(hs * 2, vs),
             )
+            # self.vqa_classifier = nn.Sequential( #baka custom layers for lrp
+            #     Linear(hs * 2, hs * 2),
+            #     LayerNorm(hs * 2,  eps=1e-12),
+            #     GELU(),
+            #     Linear(hs * 2, vs),
+            # )
             self.vqa_classifier.apply(objectives.init_weights)
 
         # ===================== Downstream ===================== #
@@ -289,9 +303,16 @@ class METERTransformerSS(pl.LightningModule):
 
     #     return ret
 
+        # self.answer_head = METERVisualAnswerHead(self.vqa_classifier)
+        # self.vis_shape = (1, 1297, 768)
+        # self.
 
-
-
+    # def relprop(self, cam, **kwargs):
+    #     cam_lang = self.answer_head.relprop(cam, **kwargs)
+    #     print(f"CAM LANG SHAPE: {cam_lang.size()}")
+    #     cam_vis = torch.zeros(self.vis_shape).to(cam_lang.device)
+    #     cam_lang, cam_vis = self.lxmert.relprop((cam_lang, cam_vis), **kwargs)
+    #     return cam_lang, cam_vis
 
     def infer(
         self,
@@ -338,8 +359,8 @@ class METERTransformerSS(pl.LightningModule):
         )
 
 
-        print(f"Text embeddings shape in infer: {text_embeds.shape}")
-        print(f"device: {device}")
+        print(f"image embeddings shape in infer: {image_embeds.shape}")
+        # print(f"device: {device}")
 
 
         x, y = text_embeds, image_embeds
