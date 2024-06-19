@@ -3,7 +3,7 @@ transformers==4.31.0
 Pillow==10.1.0
 tqdm==4.65.0
 ipdb==0.13.4
-numpy==1.26.4
+numpy
 einops==0.3.0
 pyarrow==2.0.0
 sacred==0.8.5
