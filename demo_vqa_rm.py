@@ -32,7 +32,7 @@ import sys
 
 
 def main1(_config, item, model=None, viz=True, is_pert=False, tokenizer=None):
-    print(item)
+    # print(item)
     if is_pert:
         img_path = item['img_id'] + '.jpg'
         question = item['sent']
