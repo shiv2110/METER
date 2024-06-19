@@ -208,7 +208,11 @@ def main1(_config, item, model=None, viz=True, is_pert=False, tokenizer=None):
     # print(f"R_t_i shape: {R_t_i[0].shape}")
     # print(f"R_t_t shape: {R_t_t[0].shape}")
 
-    image_relevance = R_t_i[0][1:].detach()
+    if is_pert:
+        image_relevance = R_t_i[0].detach()
+    else:
+        image_relevance = R_t_i[0][1:].detach()
+
     text_relevance = R_t_t[0].detach()
 
     # print(image_relevance, text_relevance)
