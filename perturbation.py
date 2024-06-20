@@ -641,8 +641,12 @@ def main1(_config):
             R_t_t, R_t_i = demo_vqa_rm.main1(_config, item, model=model_pert, is_pert=True, viz=False, tokenizer=model_pert.tokenizer)
             R_t_i = torch.cat((torch.zeros(1).to(device), R_t_i))
 
-        # elif method_name == "dsm":
-            # R_t_t, R_t_i = ours.generate_ours_dsm(item, use_lrp = False)
+
+        elif method_name == "transformer_attr":
+            item['img_id'] = COCO_path + item['img_id']
+            R_t_t, R_t_i = demo_vqa_rm.main1(_config, item, model=model_pert, is_pert=True, viz=False, tokenizer=model_pert.tokenizer)
+            R_t_i = torch.cat((torch.zeros(1).to(device), R_t_i))
+
 
         elif method_name == "dsm_grad":
             item['img_id'] = COCO_path + item['img_id']
