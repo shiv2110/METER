@@ -359,7 +359,7 @@ class METERTransformerSS(pl.LightningModule):
         )
 
 
-        print(f"image embeddings shape in infer: {image_embeds.shape}")
+        # print(f"image embeddings shape in infer: {image_embeds.shape}")
         # print(f"device: {device}")
 
 

@@ -32,7 +32,9 @@ from meter.modules.layers import *
 
 from meter.config import ex
 import demo_vqa_dsm_grad
+import demo_vqa_dsm_grad_cam
 import demo_vqa_rm
+import demo_vqa
 
 from meter.transforms import vit_transform, clip_transform, clip_transform_randaug
 from meter.datamodules.datamodule_base import get_pretrained_tokenizer
@@ -87,7 +89,7 @@ class METERTransformerSS(pl.LightningModule):
         # )
         self.vqa_dataset = vqa_data.VQADataset(splits="valid")
 
-        self.pert_steps = [0, 0.25, 0.5, 0.75, 0.8, 0.85, 0.9, 0.95]
+        self.pert_steps = [0, 0.25, 0.5, 0.75, 0.8, 0.85, 0.9, 0.95, 1]
         self.pert_acc = [0] * len(self.pert_steps)
 
 
@@ -644,6 +646,18 @@ def main1(_config):
         elif method_name == "dsm_grad":
             item['img_id'] = COCO_path + item['img_id']
             R_t_t, R_t_i = demo_vqa_dsm_grad.main1(_config, item, model=model_pert, is_pert=True, viz=False, tokenizer=model_pert.tokenizer)
+            R_t_i = torch.cat((torch.zeros(1).to(device), R_t_i))
+
+
+        elif method_name == "dsm_grad_cam":
+            item['img_id'] = COCO_path + item['img_id']
+            R_t_t, R_t_i = demo_vqa_dsm_grad_cam.main1(_config, item, model=model_pert, is_pert=True, viz=False, tokenizer=model_pert.tokenizer)
+            R_t_i = torch.cat((torch.zeros(1).to(device), R_t_i))
+
+
+        elif method_name == "dsm":
+            item['img_id'] = COCO_path + item['img_id']
+            R_t_t, R_t_i = demo_vqa.main1(_config, item, model=model_pert, is_pert=True, viz=False, tokenizer=model_pert.tokenizer)
             R_t_i = torch.cat((torch.zeros(1).to(device), R_t_i))
 
         # elif method_name == "dsm_grad_cam":

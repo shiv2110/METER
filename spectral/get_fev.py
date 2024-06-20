@@ -22,7 +22,8 @@ def avg_heads(cam, grad):
     return cam
 
 
-def get_eigs (feats, modality, how_many = None):
+def get_eigs (feats, modality, how_many = None, device="cpu"):
+    # print(device)
     if feats.size(0) == 1:
         feats = feats.detach().squeeze()
 
@@ -31,14 +32,14 @@ def get_eigs (feats, modality, how_many = None):
         n_image_feats = feats.size(0)
         val = int( math.sqrt(n_image_feats) )
         if val * val == n_image_feats:
-            feats = F.normalize(feats, p = 2, dim = -1)
+            feats = F.normalize(feats, p = 2, dim = -1).to(device)
         elif val * val + 1 == n_image_feats:
-            feats = F.normalize(feats, p = 2, dim = -1)[1:]
+            feats = F.normalize(feats, p = 2, dim = -1)[1:].to(device)
         else:
             print(f"Invalid number of features detected: {n_image_feats}")
 
     else:
-        feats = F.normalize(feats, p = 2, dim = -1)[1:-1]
+        feats = F.normalize(feats, p = 2, dim = -1)[1:-1].to(device)
 
     W_feat = (feats @ feats.T)
     W_feat = (W_feat * (W_feat > 0))
@@ -66,10 +67,10 @@ def get_eigs (feats, modality, how_many = None):
     
     n_tuple = torch.kthvalue(eigenvalues.real, 2)
     fev_idx = n_tuple.indices
-    fev = eigenvectors[fev_idx]
+    fev = eigenvectors[fev_idx].to(device)
 
     if modality == 'text':
-        fev = torch.cat( ( torch.zeros(1), fev, torch.zeros(1)  ) )
+        fev = torch.cat( ( torch.zeros(1).to(device), fev, torch.zeros(1).to(device)  ) )
 
     return torch.abs(fev)
     # return fev
