@@ -463,7 +463,7 @@ class METERTransformerSS(pl.LightningModule):
     def perturbation_image(self, item, cam_image, cam_text, is_positive_pert=False):
         if is_positive_pert:
             cam_image = cam_image * (-1)
-        # image_file_path = self.COCO_VAL_PATH + item['img_id'] + '.jpg'
+        
         image_file_path = item['img_id'] + '.jpg'
         batch = self.whatever(image_file_path, item['sent'])
         # text_embeds, image_embeds, extend_text_masks, text_masks, image_token_type_idx = self.infer(batch)
@@ -476,10 +476,19 @@ class METERTransformerSS(pl.LightningModule):
             # find top step boxes
             # print(f"IMAGE EMBEDS SIZE DESUUUU: {image_embeds.size()}")
             # print(f"IMAGE EMBEDS: {image_embeds.size()}")
+            cam_pure_image = cam_image[1:]
+            image_len = cam_pure_image.shape[0]
             curr_num_boxes = int((1 - step) * image_embeds.size(1))
             # print(f"CURR NUM BOXES: {curr_num_boxes}")
             _, top_bboxes_indices = cam_image.topk(k=curr_num_boxes, dim=-1)
             top_bboxes_indices = top_bboxes_indices.cpu().data.numpy()
+
+
+            # add back [CLS] token
+            top_bboxes_indices = [0] +\
+                                 [top_bboxes_indices[i] + 1 for i in range(len(top_bboxes_indices))]
+            # text tokens must be sorted for positional embedding to work
+            top_bboxes_indices = sorted(top_bboxes_indices)
 
             curr_features = image_embeds[:, top_bboxes_indices, :]
             # curr_features_masks = extend_image_masks[:, top_bboxes_indices, :]
