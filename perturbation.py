@@ -478,9 +478,9 @@ class METERTransformerSS(pl.LightningModule):
             # print(f"IMAGE EMBEDS: {image_embeds.size()}")
             cam_pure_image = cam_image[1:]
             image_len = cam_pure_image.shape[0]
-            curr_num_boxes = int((1 - step) * image_embeds.size(1))
+            curr_num_boxes = int((1 - step) * image_len)
             # print(f"CURR NUM BOXES: {curr_num_boxes}")
-            _, top_bboxes_indices = cam_image.topk(k=curr_num_boxes, dim=-1)
+            _, top_bboxes_indices = cam_pure_image.topk(k=curr_num_boxes, dim=-1)
             top_bboxes_indices = top_bboxes_indices.cpu().data.numpy()
 
 

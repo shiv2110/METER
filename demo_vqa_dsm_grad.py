@@ -99,7 +99,8 @@ def main1(_config, item, model = None, viz = True, is_pert = False, tokenizer = 
             # print("transformed image shape: {}".format(img.shape))
             img = img.unsqueeze(0).to(device)
 
-        except:
+        except Exception as e:
+            print(f"EXCEPTION: {e}")
             return False
 
         batch = {"text": [text], "image": [img]}
