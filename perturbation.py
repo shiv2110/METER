@@ -27,7 +27,8 @@ from meter.modules import swin_transformer as swin
 from meter.modules import heads, objectives, meter_utils
 from meter.modules.clip_model import build_model, adapt_position_encoding
 from meter.modules.swin_helpers import swin_adapt_position_encoding
-from transformers import RobertaConfig, RobertaModel
+from transformers import RobertaConfig
+from meter.modules.roberta_model import RobertaModel
 from meter.modules.layers import *
 
 from meter.config import ex

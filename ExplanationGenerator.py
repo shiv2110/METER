@@ -116,6 +116,12 @@ class GenerateOurs:
         # impact of text on images
         self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)
 
+        # text
+        blocks = self.model.text_transformer.encoder.layer
+        for blk in blocks:
+            self.handle_self_attention_lang(blk)
+
+
         count = 0
         for text_layer, image_layer in zip(self.model.cross_modal_text_layers, self.model.cross_modal_image_layers):
             self.handle_self_attention_image(image_layer)
@@ -140,7 +146,7 @@ class GenerateOurs:
         # return self.R_i_t, self.R_t_i #baka
         # return self.R_t_t, self.R_t_i #baka
 
-        return self.R_t_t, self.R_t_i #baka
+        return self.R_t_t, self.R_i_i #baka
     
     
     def gradcam(self, cam, grad):
@@ -188,6 +194,14 @@ class GenerateOurs:
         # impact of text on images
         self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)
 
+        # text self attention
+        blocks = self.model.text_transformer.encoder.layer
+        for blk in blocks:
+            cam = blk.attention.self.get_attention_map().detach()
+            grad = blk.attention.self.get_attn_gradients().detach()
+            cam = avg_heads(cam, grad)
+            self.R_t_t += torch.matmul(cam, self.R_t_t)
+
         for text_layer, image_layer in zip(self.model.cross_modal_text_layers, self.model.cross_modal_image_layers):
             cam = text_layer.attention.self.get_attention_map().detach()
             grad = text_layer.attention.self.get_attn_gradients().detach()
@@ -206,7 +220,7 @@ class GenerateOurs:
         self.R_t_i = cam_t_i
 
         self.R_t_t[0, 0] = 0
-        return self.R_t_t, self.R_t_i
+        return self.R_t_t, self.R_i_i
     
 
     def generate_rollout (self, text_tokens, image_tokens, device):
@@ -221,6 +235,11 @@ class GenerateOurs:
 
         cams_text = []
         cams_image = []
+
+        for blk in self.model.text_transformer.encoder.layer:
+            cam = blk.attention.self.get_attention_map().detach()
+            cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)
+            cams_text.append(cam)
 
         for text_layer in self.model.cross_modal_text_layers:
             cam = text_layer.attention.self.get_attention_map().detach()
@@ -279,6 +298,10 @@ class GenerateOurs:
         cam_t_i = self.model.cross_modal_text_layers[-1].crossattention.self.get_attention_map().detach()
         cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
         self.R_t_i = cam_t_i
+
+        # cam_t_i = self.model.cross_modal_image_layers[-1].attention.self.get_attention_map().detach()
+        # cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
+        # self.R_t_i = cam_t_i
 
         cam = self.model.cross_modal_text_layers[-1].attention.self.get_attention_map().detach()
         cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)

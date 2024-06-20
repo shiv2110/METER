@@ -139,8 +139,8 @@ def main1(_config, item, model=None, viz=True, is_pert=False, tokenizer=None):
         ours = GenerateOurs(model = model, normalize_self_attention=False, apply_self_in_rule_10=True)
         if method_type == "rm":
             R_t_t, R_t_i = ours.generate_relevance_maps( ret['text_feats'][0].shape[0], ret['image_feats'][0].shape[0], device )
-        # elif method_type == "transformer_attr":
-            # R_t_t, R_t_i = ours.generate_transformer_attr( ret['text_feats'][0].shape[0], ret['image_feats'][0].shape[0], device )
+        elif method_type == "transformer_attr":
+            R_t_t, R_t_i = ours.generate_transformer_attr( ret['text_feats'][0].shape[0], ret['image_feats'][0].shape[0], device )
         elif method_type == "attn_gradcam":
             R_t_t, R_t_i = ours.generate_attn_gradcam( ret['text_feats'][0].shape[0], ret['image_feats'][0].shape[0], device )
         elif method_type == "rollout":

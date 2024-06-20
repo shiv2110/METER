@@ -9,7 +9,9 @@ from . import swin_transformer as swin
 from . import heads, objectives, meter_utils
 from .clip_model import build_model, adapt_position_encoding
 from .swin_helpers import swin_adapt_position_encoding
-from transformers import RobertaConfig, RobertaModel
+from transformers import RobertaConfig
+from .roberta_model import RobertaModel
+
 from .layers import *
 
 # class METERVisualAnswerHead():
