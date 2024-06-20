@@ -261,7 +261,7 @@ class GenerateOurs:
 
         self.R_t_t[0, 0] = 0
         # self.R_t_i[0, 0] = 0
-        return self.R_t_t, self.R_t_i
+        return self.R_t_t, self.R_i_i
 
     # def generate_lrp(self, text_tokens, image_tokens, device):
     #     self.R_t_t = torch.eye(text_tokens, text_tokens).to(device)
