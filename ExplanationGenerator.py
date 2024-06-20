@@ -295,13 +295,13 @@ class GenerateOurs:
         # impact of text on images
         self.R_i_t = torch.zeros(image_tokens, text_tokens).to(device)      
 
-        cam_t_i = self.model.cross_modal_text_layers[-1].crossattention.self.get_attention_map().detach()
-        cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
-        self.R_t_i = cam_t_i
-
-        # cam_t_i = self.model.cross_modal_image_layers[-1].attention.self.get_attention_map().detach()
+        # cam_t_i = self.model.cross_modal_text_layers[-1].crossattention.self.get_attention_map().detach()
         # cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
         # self.R_t_i = cam_t_i
+
+        cam_t_i = self.model.cross_modal_image_layers[-1].attention.self.get_attention_map().detach()
+        cam_t_i = cam_t_i.reshape(-1, cam_t_i.shape[-2], cam_t_i.shape[-1]).mean(dim=0)
+        self.R_t_i = cam_t_i
 
         cam = self.model.cross_modal_text_layers[-1].attention.self.get_attention_map().detach()
         cam = cam.reshape(-1, cam.shape[-2], cam.shape[-1]).mean(dim=0)
